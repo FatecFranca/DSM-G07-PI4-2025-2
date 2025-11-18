@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design system for Relógio de Energia - Energy monitoring theme with blue and green colors */
+
+@layer base {
+  :root {
+    /* Background & surfaces */
+    --background: 210 20% 98%;
+    --foreground: 210 24% 16%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 24% 16%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 24% 16%;
+
+    /* Primary brand - Deep blue for energy/trust */
+    --primary: 210 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 210 100% 35%;
+    --primary-light: 210 100% 95%;
+
+    /* Secondary - Green for sustainability */
+    --secondary: 142 69% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 142 69% 40%;
+    --secondary-light: 142 50% 95%;
+
+    /* Energy status colors */
+    --energy-ok: 142 69% 45%; /* Green - paying correctly */
+    --energy-warning: 45 100% 60%; /* Yellow - attention needed */
+    --energy-danger: 0 84% 60%; /* Red - overpaying */
+
+    /* Neutral tones */
+    --muted: 210 40% 94%;
+    --muted-foreground: 210 16% 46%;
+
+    --accent: 210 40% 94%;
+    --accent-foreground: 210 24% 16%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 210 100% 40%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark theme for energy app */
+    --background: 210 30% 8%;
+    --foreground: 210 20% 98%;
+
+    --card: 210 25% 12%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 210 25% 12%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 210 100% 60%;
+    --primary-foreground: 210 30% 8%;
+    --primary-hover: 210 100% 55%;
+    --primary-light: 210 100% 15%;
+
+    --secondary: 142 69% 55%;
+    --secondary-foreground: 210 30% 8%;
+    --secondary-hover: 142 69% 50%;
+    --secondary-light: 142 50% 15%;
+
+    --energy-ok: 142 69% 55%;
+    --energy-warning: 45 100% 70%;
+    --energy-danger: 0 84% 70%;
+
+    --muted: 210 25% 15%;
+    --muted-foreground: 210 20% 65%;
+
+    --accent: 210 25% 15%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 84% 70%;
+    --destructive-foreground: 210 30% 8%;
+
+    --border: 210 25% 18%;
+    --input: 210 25% 18%;
+    --ring: 210 100% 60%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
