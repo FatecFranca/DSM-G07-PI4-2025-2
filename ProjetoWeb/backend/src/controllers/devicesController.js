@@ -22,20 +22,43 @@ export const getDevice = async (req, res) => {
 
 export const createDevice = async (req, res) => {
   try {
-    const { name, identification_code, property_address } = req.body;
-    if (!name || !identification_code || !property_address) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    const { name, property_address } = req.body;
+
+    if (!name || !property_address) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
-    const device = await DeviceModel.create({ name, identification_code, property_address }, req.userId);
-    res.status(201).json(device);
+
+    // busca o último código
+    const last = await DeviceModel.findLast(req.userId); // deve retornar o último device
+
+    // gera o próximo número automaticamente
+    const next = last
+      ? parseInt(last.identification_code.slice(3)) + 1
+      : 1;
+
+    const newCode = `REL${String(next).padStart(3, "0")}`;
+
+    const device = await DeviceModel.create(
+      { name, property_address, identification_code: newCode },
+      req.userId
+    );
+
+    return res.status(201).json(device);
+
   } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ error: 'Código de identificação já existe' });
+    if (error.code === "23505") {
+      return res.status(400).json({ error: "Código de identificação já existe" });
     }
-    const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';
-    res.status(500).json({ error: message });
+
+    return res.status(500).json({
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error"
+    });
   }
 };
+
 
 export const updateDevice = async (req, res) => {
   try {

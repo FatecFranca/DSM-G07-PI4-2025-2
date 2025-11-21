@@ -30,11 +30,11 @@ export default function Devices() {
       const data = await api.getDevices();
       setDevices(data || []);
     } catch (error) {
-      toast({
+      /*toast({
         title: "Erro",
         description: "Erro ao carregar dispositivos",
         variant: "destructive",
-      });
+      });*/
     }
   };
 
@@ -123,16 +123,7 @@ export default function Devices() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="identification_code">Código de Identificação</Label>
-                  <Input
-                    id="identification_code"
-                    placeholder="Ex: REL001"
-                    value={formData.identification_code}
-                    onChange={(e) => setFormData({ ...formData, identification_code: e.target.value })}
-                    required
-                  />
-                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="property_address">Endereço do Imóvel</Label>
                   <Input

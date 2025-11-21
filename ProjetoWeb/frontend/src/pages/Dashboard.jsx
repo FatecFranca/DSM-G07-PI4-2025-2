@@ -44,11 +44,11 @@ export default function Dashboard() {
       const data = await api.getDashboard();
       setBills(data.bills);
     } catch (error) {
-      toast({
+      /*toast({
         title: "Erro",
         description: "Erro ao carregar dados do dashboard",
         variant: "destructive",
-      });
+      });*/
     } finally {
       setLoading(false);
     }

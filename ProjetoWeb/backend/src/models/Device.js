@@ -1,19 +1,11 @@
 import pool from '../config/database.js';
 
 export async function findAll(userId) {
-  if (!userId) {
-    const result = await pool.query('SELECT id, nome_disp as name, codigo as identification_code, endereco as property_address FROM tb_dispositivos ORDER BY id DESC');
-    return result.rows;
-  }
-  const result = await pool.query('SELECT id, nome_disp as name, codigo as identification_code, endereco as property_address FROM tb_dispositivos WHERE id_user = $1 ORDER BY id DESC', [parseInt(userId)]);
+  const result = await pool.query('SELECT id, nome_disp as name, codigo as identification_code, endereco as property_address, consumo_iot FROM tb_dispositivos WHERE id_user = $1 ORDER BY id DESC', [parseInt(userId)]);
   return result.rows;
 }
 
 export async function findById(id, userId) {
-  if (!userId) {
-    const result = await pool.query('SELECT id, nome_disp as name, codigo as identification_code, endereco as property_address FROM tb_dispositivos WHERE id = $1', [parseInt(id)]);
-    return result.rows[0] || null;
-  }
   const result = await pool.query('SELECT id, nome_disp as name, codigo as identification_code, endereco as property_address FROM tb_dispositivos WHERE id = $1 AND id_user = $2', [parseInt(id), parseInt(userId)]);
   return result.rows[0] || null;
 }
@@ -70,4 +62,17 @@ export async function deleteDevice(id, userId) {
   }
   const result = await pool.query('DELETE FROM tb_dispositivos WHERE id = $1', [parseInt(id)]);
   return result.rowCount > 0;
+}
+
+export async function findLast(userId) {
+  const result = await pool.query(
+    `SELECT codigo AS identification_code
+     FROM tb_dispositivos
+     WHERE id_user = $1
+     ORDER BY id DESC
+     LIMIT 1`,
+    [parseInt(userId)]
+  );
+
+  return result.rows[0] || null;
 }

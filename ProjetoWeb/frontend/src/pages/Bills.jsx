@@ -38,13 +38,22 @@ export default function Bills() {
         api.getDevices()
       ]);
       setBills(billsData || []);
-      setDevices((devicesData || []).map(d => ({ id: String(d.id), name: d.name })));
+      const devicesArray = Array.isArray(devicesData) ? devicesData : [];
+      setDevices(devicesArray.map(d => ({ id: String(d.id), name: d.name })));
     } catch (error) {
-      toast({
+      // Tenta carregar dispositivos mesmo se bills falhar
+      try {
+        const devicesData = await api.getDevices();
+        const devicesArray = Array.isArray(devicesData) ? devicesData : [];
+        setDevices(devicesArray.map(d => ({ id: String(d.id), name: d.name })));
+      } catch (devicesError) {
+        // Silenciar erro de dispositivos também
+      }
+      /*toast({
         title: "Erro",
         description: "Erro ao carregar dados",
         variant: "destructive",
-      });
+      });*/
     }
   };
 
