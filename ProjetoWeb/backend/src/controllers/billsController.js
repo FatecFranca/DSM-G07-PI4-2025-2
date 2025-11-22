@@ -5,7 +5,9 @@ export const getBills = async (req, res) => {
     const bills = await BillModel.findAll(req.userId);
     res.json(bills);
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';
+    console.error('Error getting bills:', error);
+    res.status(500).json({ error: message });
   }
 };
 
@@ -21,11 +23,11 @@ export const getBill = async (req, res) => {
 
 export const createBill = async (req, res) => {
   try {
-    const { device_id, month_year, company_consumption_kwh, real_consumption_kwh, amount_paid, price_per_kwh } = req.body;
+    const { device_id, month_year, company_consumption_kwh, consumo_iot, amount_paid, price_per_kwh } = req.body;
     if (!device_id || !month_year || company_consumption_kwh === undefined || !amount_paid || !price_per_kwh) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-    const bill = await BillModel.create({ device_id, month_year, company_consumption_kwh, real_consumption_kwh, amount_paid, price_per_kwh }, req.userId);
+    const bill = await BillModel.create({ device_id, month_year, company_consumption_kwh, consumo_iot, amount_paid, price_per_kwh }, req.userId);
     res.status(201).json(bill);
   } catch (error) {
     const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';

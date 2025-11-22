@@ -7,7 +7,7 @@ function transform(row) {
     device_id: row.id_disp,
     month_year: row.data ? row.data.toISOString().slice(0, 7) : null,
     company_consumption_kwh: row.consumo_estimado ? parseFloat(row.consumo_estimado) : null,
-    real_consumption_kwh: row.consumo_real ? parseFloat(row.consumo_real) : null,
+    consumo_iot: row.consumo_iot ? parseFloat(row.consumo_iot) : null,
     amount_paid: row.valor_pago ? parseFloat(row.valor_pago) : null,
     price_per_kwh: row.preco_kwh ? parseFloat(row.preco_kwh) : null,
     device: row.device_id ? { id: row.device_id, name: row.device_name, identification_code: row.device_code } : null
@@ -17,7 +17,7 @@ function transform(row) {
 export async function findAll(userId) {
   if (!userId) {
     const result = await pool.query(`
-      SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_real, f.valor_pago, f.preco_kwh,
+      SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_iot, f.valor_pago, f.preco_kwh,
              d.id as device_id, d.nome_disp as device_name, d.codigo as device_code
       FROM tb_fatura f
       LEFT JOIN tb_dispositivos d ON f.id_disp = d.id
@@ -27,7 +27,7 @@ export async function findAll(userId) {
   }
 
   const result = await pool.query(`
-    SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_real, f.valor_pago, f.preco_kwh,
+    SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_iot, f.valor_pago, f.preco_kwh,
            d.id as device_id, d.nome_disp as device_name, d.codigo as device_code
     FROM tb_fatura f
     LEFT JOIN tb_dispositivos d ON f.id_disp = d.id
@@ -40,7 +40,7 @@ export async function findAll(userId) {
 export async function findById(id, userId) {
   if (!userId) {
     const result = await pool.query(`
-      SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_real, f.valor_pago, f.preco_kwh,
+      SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_iot, f.valor_pago, f.preco_kwh,
              d.id as device_id, d.nome_disp as device_name, d.codigo as device_code
       FROM tb_fatura f
       LEFT JOIN tb_dispositivos d ON f.id_disp = d.id
@@ -49,7 +49,7 @@ export async function findById(id, userId) {
     return transform(result.rows[0] || null);
   }
   const result = await pool.query(`
-    SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_real, f.valor_pago, f.preco_kwh,
+    SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_iot, f.valor_pago, f.preco_kwh,
            d.id as device_id, d.nome_disp as device_name, d.codigo as device_code
     FROM tb_fatura f
     LEFT JOIN tb_dispositivos d ON f.id_disp = d.id
@@ -59,23 +59,29 @@ export async function findById(id, userId) {
 }
 
 export async function create(bill, userId) {
-  const { device_id, month_year, company_consumption_kwh, real_consumption_kwh, amount_paid, price_per_kwh } = bill;
+  const { device_id, month_year, company_consumption_kwh, consumo_iot, amount_paid, price_per_kwh } = bill;
   const billDate = new Date(month_year + '-01');
 
-  const deviceCheck = await pool.query('SELECT id, id_user FROM tb_dispositivos WHERE id = $1', [parseInt(device_id)]);
+  const deviceCheck = await pool.query('SELECT id, id_user, consumo_iot FROM tb_dispositivos WHERE id = $1', [parseInt(device_id)]);
   if (!deviceCheck.rows[0] || (userId && deviceCheck.rows[0].id_user !== parseInt(userId))) {
     throw new Error('Device not found or not owned by user');
   }
 
+  // Se consumo_iot não foi fornecido, buscar do dispositivo
+  let finalConsumoIot = consumo_iot;
+  if (!finalConsumoIot && deviceCheck.rows[0].consumo_iot !== null && deviceCheck.rows[0].consumo_iot !== undefined) {
+    finalConsumoIot = deviceCheck.rows[0].consumo_iot;
+  }
+
   const result = await pool.query(
-    `INSERT INTO tb_fatura (id_disp, data, consumo_estimado, consumo_real, valor_pago, preco_kwh, id_user)
+    `INSERT INTO tb_fatura (id_disp, data, consumo_estimado, consumo_iot, valor_pago, preco_kwh, id_user)
      VALUES ($1, $2, $3, $4, $5, $6, $7) 
-     RETURNING id, id_disp, data, consumo_estimado, consumo_real, valor_pago, preco_kwh`,
+     RETURNING id, id_disp, data, consumo_estimado, consumo_iot, valor_pago, preco_kwh`,
     [
       parseInt(device_id), 
       billDate, 
       company_consumption_kwh ? String(company_consumption_kwh) : null, 
-      real_consumption_kwh ? String(real_consumption_kwh) : null, 
+      finalConsumoIot ? String(finalConsumoIot) : null, 
       String(amount_paid), 
       String(price_per_kwh),
       userId ? parseInt(userId) : null
@@ -121,9 +127,9 @@ export async function update(id, bill, userId) {
     updates.push(`consumo_estimado = $${paramCount++}`);
     values.push(String(bill.company_consumption_kwh));
   }
-  if (bill.real_consumption_kwh !== undefined) {
-    updates.push(`consumo_real = $${paramCount++}`);
-    values.push(String(bill.real_consumption_kwh));
+  if (bill.consumo_iot !== undefined) {
+    updates.push(`consumo_iot = $${paramCount++}`);
+    values.push(String(bill.consumo_iot));
   }
   if (bill.amount_paid !== undefined) {
     updates.push(`valor_pago = $${paramCount++}`);
@@ -138,7 +144,7 @@ export async function update(id, bill, userId) {
 
   values.push(parseInt(id));
   const result = await pool.query(
-    `UPDATE tb_fatura SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, id_disp, data, consumo_estimado, consumo_real, valor_pago, preco_kwh`,
+    `UPDATE tb_fatura SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, id_disp, data, consumo_estimado, consumo_iot, valor_pago, preco_kwh`,
     values
   );
   
@@ -172,7 +178,7 @@ export async function deleteBill(id, userId) {
 export async function findAllForDashboard(userId) {
   const params = [];
   let query = `
-    SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_real, f.valor_pago, f.preco_kwh,
+    SELECT f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_iot, f.valor_pago, f.preco_kwh,
            d.id as device_id, d.nome_disp as device_name, d.codigo as device_code
     FROM tb_fatura f
     LEFT JOIN tb_dispositivos d ON f.id_disp = d.id

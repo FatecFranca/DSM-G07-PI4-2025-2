@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Zap, MapPin, Hash, Trash2, Edit } from "lucide-react";
+import { Plus, Zap, MapPin, Hash, Trash2, Edit, Activity } from "lucide-react";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -194,9 +194,17 @@ export default function Devices() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>{device.property_address}</span>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>{device.property_address}</span>
+                  </div>
+                  {device.consumo_iot !== null && device.consumo_iot !== undefined && (
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Activity className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>Consumo IoT: {parseFloat(device.consumo_iot).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

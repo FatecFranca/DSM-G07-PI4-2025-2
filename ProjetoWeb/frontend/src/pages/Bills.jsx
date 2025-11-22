@@ -19,10 +19,10 @@ export default function Bills() {
   const [formData, setFormData] = useState({
     month_year: "",
     company_consumption_kwh: "",
-    real_consumption_kwh: "",
     amount_paid: "",
     price_per_kwh: "",
     device_id: "",
+    consumo_iot: "",
   });
   const [editingId, setEditingId] = useState(null);
   const { toast } = useToast();
@@ -39,13 +39,21 @@ export default function Bills() {
       ]);
       setBills(billsData || []);
       const devicesArray = Array.isArray(devicesData) ? devicesData : [];
-      setDevices(devicesArray.map(d => ({ id: String(d.id), name: d.name })));
+      setDevices(devicesArray.map(d => ({ 
+        id: String(d.id), 
+        name: d.name, 
+        consumo_iot: d.consumo_iot 
+      })));
     } catch (error) {
       // Tenta carregar dispositivos mesmo se bills falhar
       try {
         const devicesData = await api.getDevices();
         const devicesArray = Array.isArray(devicesData) ? devicesData : [];
-        setDevices(devicesArray.map(d => ({ id: String(d.id), name: d.name })));
+        setDevices(devicesArray.map(d => ({ 
+          id: String(d.id), 
+          name: d.name,
+          consumo_iot: d.consumo_iot
+        })));
       } catch (devicesError) {
         // Silenciar erro de dispositivos também
       }
@@ -54,6 +62,28 @@ export default function Bills() {
         description: "Erro ao carregar dados",
         variant: "destructive",
       });*/
+    }
+  };
+
+  const handleDeviceChange = async (deviceId) => {
+    setFormData({ ...formData, device_id: deviceId });
+    
+    // Buscar o dispositivo selecionado para obter o consumo_iot
+    const selectedDevice = devices.find(d => String(d.id) === String(deviceId));
+    if (selectedDevice && selectedDevice.consumo_iot !== null && selectedDevice.consumo_iot !== undefined) {
+      setFormData(prev => ({ ...prev, device_id: deviceId, consumo_iot: String(selectedDevice.consumo_iot) }));
+    } else {
+      // Se não tiver no array local, buscar da API
+      try {
+        const device = await api.getDevice(deviceId);
+        if (device && device.consumo_iot !== null && device.consumo_iot !== undefined) {
+          setFormData(prev => ({ ...prev, device_id: deviceId, consumo_iot: String(device.consumo_iot) }));
+        } else {
+          setFormData(prev => ({ ...prev, device_id: deviceId, consumo_iot: "" }));
+        }
+      } catch (error) {
+        setFormData(prev => ({ ...prev, device_id: deviceId, consumo_iot: "" }));
+      }
     }
   };
 
@@ -70,7 +100,7 @@ export default function Bills() {
         device_id: formData.device_id,
         month_year: formData.month_year,
         company_consumption_kwh: parseFloat(formData.company_consumption_kwh),
-        real_consumption_kwh: formData.real_consumption_kwh ? parseFloat(formData.real_consumption_kwh) : null,
+        consumo_iot: formData.consumo_iot ? parseFloat(formData.consumo_iot) : null,
         amount_paid: parseFloat(formData.amount_paid),
         price_per_kwh: parseFloat(formData.price_per_kwh),
       };
@@ -87,10 +117,10 @@ export default function Bills() {
       setFormData({
         month_year: "",
         company_consumption_kwh: "",
-        real_consumption_kwh: "",
         amount_paid: "",
         price_per_kwh: "",
         device_id: "",
+        consumo_iot: "",
       });
       setIsOpen(false);
       loadData();
@@ -109,10 +139,10 @@ const handleEdit = (bill) => {
   setFormData({
     month_year: bill.month_year || '',
     company_consumption_kwh: bill.company_consumption_kwh || '',
-    real_consumption_kwh: bill.real_consumption_kwh || '',
     amount_paid: bill.amount_paid || '',
     price_per_kwh: bill.price_per_kwh || '',
     device_id: String(bill.device_id) || '',
+    consumo_iot: bill.consumo_iot ? String(bill.consumo_iot) : '',
   });
   setEditingId(bill.id);
   setIsOpen(true);
@@ -136,21 +166,21 @@ const handleEdit = (bill) => {
   };
 
   const getStatusBadge = (bill) => {
-    if (!bill.real_consumption_kwh) {
-      return <Badge variant="secondary">Aguardando medição</Badge>;
+    if (!bill.consumo_iot) {
+      return <Badge variant="secondary">Sem consumo IoT</Badge>;
     }
 
-    const realValue = bill.real_consumption_kwh * bill.price_per_kwh;
+    const iotValue = bill.consumo_iot * bill.price_per_kwh;
     const paidValue = bill.amount_paid;
-    const diff = Math.abs(realValue - paidValue) / paidValue;
+    const diff = Math.abs(iotValue - paidValue) / paidValue;
 
     if (diff <= 0.05) {
       return <Badge className="bg-energy-ok text-white">Correto ✅</Badge>;
-    } else if (paidValue > realValue) {
+    } else if (paidValue > iotValue) {
       return <Badge className="bg-energy-danger text-white">Pagando a mais ⚠️</Badge>;
     } else {
       return <Badge className="bg-energy-warning text-white">Pagando a menos ❌</Badge>;
-    }// danger --vermelho warning---amarelo
+    }
   };
 
   return (
@@ -182,7 +212,7 @@ const handleEdit = (bill) => {
                   <Label htmlFor="device_id">Dispositivo</Label>
                   <Select
                     value={formData.device_id}
-                    onValueChange={(value) => setFormData({ ...formData, device_id: value })}
+                    onValueChange={handleDeviceChange}
                     required
                   >
                     <SelectTrigger>
@@ -220,14 +250,16 @@ const handleEdit = (bill) => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="real_consumption_kwh">Consumo Real (kWh) - Opcional</Label>
+                  <Label htmlFor="consumo_iot">Consumo IoT (kWh)</Label>
                   <Input
-                    id="real_consumption_kwh"
+                    id="consumo_iot"
                     type="number"
                     step="0.01"
-                    placeholder="Ex: 145.30"
-                    value={formData.real_consumption_kwh}
-                    onChange={(e) => setFormData({ ...formData, real_consumption_kwh: e.target.value })}
+                    placeholder="Preenchido automaticamente"
+                    value={formData.consumo_iot}
+                    readOnly
+                    disabled
+                    className="bg-muted"
                   />
                 </div>
                 <div className="space-y-2">
@@ -294,7 +326,7 @@ const handleEdit = (bill) => {
           <CardHeader>
             <CardTitle>Lista de Faturas</CardTitle>
             <CardDescription>
-              Histórico de faturas cadastradas e comparação com consumo real
+              Histórico de faturas cadastradas e comparação com consumo IoT
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -304,7 +336,7 @@ const handleEdit = (bill) => {
                   <TableHead>Período</TableHead>
                   <TableHead>Dispositivo</TableHead>
                   <TableHead>Consumo Informado</TableHead>
-                  <TableHead>Consumo Real</TableHead>
+                  <TableHead>Consumo IoT</TableHead>
                   <TableHead>Valor Pago</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead></TableHead>
@@ -325,7 +357,7 @@ const handleEdit = (bill) => {
                     <TableCell>{bill.device?.name || 'N/A'}</TableCell>
                     <TableCell>{bill.company_consumption_kwh} kWh</TableCell>
                     <TableCell>
-                      {bill.real_consumption_kwh ? `${bill.real_consumption_kwh} kWh` : "-"}
+                      {bill.consumo_iot ? `${bill.consumo_iot} kWh` : "-"}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">

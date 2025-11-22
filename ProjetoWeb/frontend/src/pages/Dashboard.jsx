@@ -32,71 +32,106 @@ ChartJS.register(
 
 export default function Dashboard() {
   const [bills, setBills] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchBills();
+    fetchData();
   }, []);
 
-  const fetchBills = async () => {
+  const fetchData = async () => {
     try {
-      const data = await api.getDashboard();
-      setBills(data.bills);
+      const [dashboardData, analyticsData] = await Promise.all([
+        api.getDashboard(),
+        api.getDashboardAnalytics()
+      ]);
+      setBills(dashboardData.bills || []);
+      setAnalytics(analyticsData);
     } catch (error) {
-      /*toast({
+      console.error('Error fetching dashboard data:', error);
+      toast({
         title: "Erro",
         description: "Erro ao carregar dados do dashboard",
         variant: "destructive",
-      });*/
+      });
+      // Garantir que os estados estão definidos mesmo em caso de erro
+      setBills([]);
+      setAnalytics(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const billsWithRealData = bills.filter(bill => bill.real_consumption_kwh !== null);
+  const billsWithIotData = bills.filter(bill => 
+    bill && 
+    bill.consumo_iot !== null && 
+    bill.consumo_iot !== undefined &&
+    bill.price_per_kwh !== null &&
+    bill.price_per_kwh !== undefined &&
+    bill.amount_paid !== null &&
+    bill.amount_paid !== undefined
+  );
 
   // Calculate summary statistics
-  const totalSavings = billsWithRealData.reduce((acc, bill) => {
-    const realValue = bill.real_consumption_kwh * bill.price_per_kwh;
-    const paidValue = bill.amount_paid;
-    return acc + (paidValue - realValue);
+  const totalSavings = billsWithIotData.reduce((acc, bill) => {
+    try {
+      const iotValue = (bill.consumo_iot || 0) * (bill.price_per_kwh || 0);
+      const paidValue = bill.amount_paid || 0;
+      return acc + (paidValue - iotValue);
+    } catch (e) {
+      return acc;
+    }
   }, 0);
 
-  const accurateBills = billsWithRealData.filter(bill => {
-    const realValue = bill.real_consumption_kwh * bill.price_per_kwh;
-    const paidValue = bill.amount_paid;
-    const diff = Math.abs(realValue - paidValue) / paidValue;
-    return diff <= 0.05;
+  const accurateBills = billsWithIotData.filter(bill => {
+    try {
+      const iotValue = (bill.consumo_iot || 0) * (bill.price_per_kwh || 0);
+      const paidValue = bill.amount_paid || 0;
+      if (paidValue === 0) return false;
+      const diff = Math.abs(iotValue - paidValue) / paidValue;
+      return diff <= 0.05;
+    } catch (e) {
+      return false;
+    }
   });
 
-  const overpaidBills = billsWithRealData.filter(bill => {
-    const realValue = bill.real_consumption_kwh * bill.price_per_kwh;
-    const paidValue = bill.amount_paid;
-    return paidValue > realValue * 1.05;
+  const overpaidBills = billsWithIotData.filter(bill => {
+    try {
+      const iotValue = (bill.consumo_iot || 0) * (bill.price_per_kwh || 0);
+      const paidValue = bill.amount_paid || 0;
+      return paidValue > iotValue * 1.05;
+    } catch (e) {
+      return false;
+    }
   });
 
   // Prepare chart data
-  const chartLabels = billsWithRealData.map(bill => 
-    new Date(bill.month_year + "-01").toLocaleDateString("pt-BR", {
-      month: "short",
-      year: "2-digit"
-    })
-  );
+  const chartLabels = billsWithIotData.map(bill => {
+    try {
+      if (!bill.month_year) return '';
+      return new Date(bill.month_year + "-01").toLocaleDateString("pt-BR", {
+        month: "short",
+        year: "2-digit"
+      });
+    } catch (e) {
+      return '';
+    }
+  }).filter(label => label !== '');
 
   const barChartData = {
     labels: chartLabels,
     datasets: [
       {
         label: 'Consumo Informado (kWh)',
-        data: billsWithRealData.map(bill => bill.company_consumption_kwh),
+        data: billsWithIotData.map(bill => bill.company_consumption_kwh || 0),
         backgroundColor: 'hsl(210, 100%, 40%)',
         borderColor: 'hsl(210, 100%, 35%)',
         borderWidth: 1,
       },
       {
-        label: 'Consumo Real (kWh)',
-        data: billsWithRealData.map(bill => bill.real_consumption_kwh),
+        label: 'Consumo IoT (kWh)',
+        data: billsWithIotData.map(bill => bill.consumo_iot || 0),
         backgroundColor: 'hsl(142, 69%, 45%)',
         borderColor: 'hsl(142, 69%, 40%)',
         borderWidth: 1,
@@ -109,14 +144,14 @@ export default function Dashboard() {
     datasets: [
       {
         label: 'Consumo Informado',
-        data: billsWithRealData.map(bill => bill.company_consumption_kwh),
+        data: billsWithIotData.map(bill => bill.company_consumption_kwh || 0),
         borderColor: 'hsl(210, 100%, 40%)',
         backgroundColor: 'hsl(210, 100%, 95%)',
         tension: 0.4,
       },
       {
-        label: 'Consumo Real',
-        data: billsWithRealData.map(bill => bill.real_consumption_kwh),
+        label: 'Consumo IoT',
+        data: billsWithIotData.map(bill => bill.consumo_iot || 0),
         borderColor: 'hsl(142, 69%, 45%)',
         backgroundColor: 'hsl(142, 50%, 95%)',
         tension: 0.4,
@@ -131,7 +166,7 @@ export default function Dashboard() {
         data: [
           accurateBills.length,
           overpaidBills.length,
-          billsWithRealData.length - accurateBills.length - overpaidBills.length,
+          billsWithIotData.length - accurateBills.length - overpaidBills.length,
         ],
         backgroundColor: [
           'hsl(142, 69%, 45%)',
@@ -188,15 +223,15 @@ export default function Dashboard() {
   }
 
   const getMainStatusMessage = () => {
-    if (billsWithRealData.length === 0) {
+    if (billsWithIotData.length === 0) {
       return {
         icon: <Zap className="h-6 w-6" />,
-        message: "Adicione dados de consumo real para análise",
+        message: "Adicione dados de consumo IoT para análise",
         variant: "secondary",
       };
     }
 
-    const accuracyRate = accurateBills.length / billsWithRealData.length;
+    const accuracyRate = billsWithIotData.length > 0 ? accurateBills.length / billsWithIotData.length : 0;
     
     if (accuracyRate >= 0.8) {
       return {
@@ -239,9 +274,9 @@ export default function Dashboard() {
             {statusMessage.icon}
             <div>
               <h2 className="text-2xl font-bold">{statusMessage.message}</h2>
-              {billsWithRealData.length > 0 && (
+              {billsWithIotData.length > 0 && (
                 <p className="text-sm opacity-90">
-                  Baseado em {billsWithRealData.length} fatura(s) com dados reais
+                  Baseado em {billsWithIotData.length} fatura(s) com dados IoT
                 </p>
               )}
             </div>
@@ -261,7 +296,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{bills.length}</div>
             <p className="text-xs text-muted-foreground">
-              {billsWithRealData.length} com consumo real
+              {billsWithIotData.length} com consumo IoT
             </p>
           </CardContent>
         </Card>
@@ -298,7 +333,7 @@ export default function Dashboard() {
               {accurateBills.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              de {billsWithRealData.length} analisadas
+              de {billsWithIotData.length} analisadas
             </p>
           </CardContent>
         </Card>
@@ -322,11 +357,11 @@ export default function Dashboard() {
       </div>
 
       {/* Gráficos */}
-      {billsWithRealData.length > 0 ? (
+      {billsWithIotData.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Consumo: Real vs Informado</CardTitle>
+              <CardTitle>Consumo: IoT vs Informado</CardTitle>
               <CardDescription>
                 Comparação mensal em kWh
               </CardDescription>
@@ -348,19 +383,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Distribuição de Precisão</CardTitle>
-              <CardDescription>
-                Proporção de faturas por categoria de pagamento
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <div className="w-64 h-64">
-                <Pie data={pieChartData} options={pieOptions} />
-              </div>
-            </CardContent>
-          </Card>
         </div>
       ) : (
         <Card>
@@ -368,10 +390,175 @@ export default function Dashboard() {
             <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Dados insuficientes para gráficos</h3>
             <p className="text-muted-foreground text-center">
-              Adicione faturas com consumo real medido para visualizar os gráficos de comparação
+              Adicione faturas com consumo IoT para visualizar os gráficos de comparação
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Analytics Estatísticos */}
+      {analytics && analytics.media && (
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Média Geral de Faturas</CardTitle>
+                <CardDescription>Baseado em consumo IoT</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {(analytics.media?.geral || 0).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL"
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Desvio padrão: {(analytics.desvio_padrao || 0).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL"
+                  })}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribuição Normal</CardTitle>
+                <CardDescription>Média e desvio padrão</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-sm text-muted-foreground">Média (μ): </span>
+                    <span className="font-semibold">
+                      {(analytics.distribuicao_normal?.media || 0).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                      })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Desvio (σ): </span>
+                    <span className="font-semibold">
+                      {(analytics.distribuicao_normal?.desvio || 0).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Correlações</CardTitle>
+                <CardDescription>Medidas de associação</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-sm text-muted-foreground">Est. vs IoT: </span>
+                    <span className="font-semibold">
+                      {(analytics.correlacao?.consumo_estimado_iot || 0).toFixed(3)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">IoT vs Valor: </span>
+                    <span className="font-semibold">
+                      {(analytics.correlacao?.iot_valor || 0).toFixed(3)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Regressão Linear</CardTitle>
+                <CardDescription>IoT vs Valor Pago</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Coeficiente (a): </span>
+                    <span className="font-semibold">{(analytics.regressao?.a || 0).toFixed(4)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Intercepto (b): </span>
+                    <span className="font-semibold">{(analytics.regressao?.b || 0).toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">R²: </span>
+                    <span className="font-semibold">{((analytics.regressao?.r2 || 0) * 100).toFixed(2)}%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Média por Dispositivo</CardTitle>
+                <CardDescription>Valor médio das faturas por dispositivo</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {analytics.media?.por_dispositivo && analytics.media.por_dispositivo.length > 0 ? (
+                    analytics.media.por_dispositivo.map((device) => (
+                      <div key={device.device_id} className="flex justify-between items-center p-2 border rounded">
+                        <span className="font-medium">{device.device_name || 'Desconhecido'}</span>
+                        <span className="text-primary font-bold">
+                          {(device.media || 0).toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL"
+                          })}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Percentuais por Dispositivo */}
+          {analytics.percentual && Array.isArray(analytics.percentual) && analytics.percentual.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribuição por Dispositivo</CardTitle>
+                <CardDescription>Percentual de consumo IoT por dispositivo</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {analytics.percentual.map((item) => (
+                    <div key={item.device_id || Math.random()}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium">{item.device_name || 'Desconhecido'}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {(item.percentual || 0).toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full transition-all"
+                          style={{ width: `${item.percentual || 0}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total: {(item.total_consumo || 0).toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })} kWh
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

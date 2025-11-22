@@ -152,6 +152,10 @@ async function getDashboard() {
   return request('/dashboard');
 }
 
+async function getDashboardAnalytics() {
+  return request('/dashboard/analytics');
+}
+
 export const api = {
   register,
   login,
@@ -168,6 +172,7 @@ export const api = {
   updateBill,
   deleteBill,
   getDashboard,
+  getDashboardAnalytics,
   testConnection,
 };
 

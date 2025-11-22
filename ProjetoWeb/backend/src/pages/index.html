@@ -221,9 +221,28 @@
     "id": 3,
     "name": "Medidor da Sala",
     "identification_code": "XYZ-100",
-    "property_address": "Rua A, 123"
+    "property_address": "Rua A, 123",
+    "consumo_iot": 150.50
   }
 ]
+</code></pre>
+        </div>
+    </div>
+
+    <!-- GET DEVICE BY ID -->
+    <div class="endpoint">
+        <span class="method GET">GET</span> /api/devices/:id
+        <p>Retorna um dispositivo específico pelo ID.</p>
+
+        <div class="code-container">
+            <span class="status-badge success">200</span>
+<pre><code>{
+  "id": 3,
+  "name": "Medidor da Sala",
+  "identification_code": "XYZ-100",
+  "property_address": "Rua A, 123",
+  "consumo_iot": 150.50
+}
 </code></pre>
         </div>
     </div>
@@ -281,7 +300,7 @@
     <!-- CREATE BILL -->
     <div class="endpoint">
         <span class="method POST">POST</span> /api/bills
-        <p>Cria uma fatura para um dispositivo do usuário.</p>
+        <p>Cria uma fatura para um dispositivo do usuário. O campo consumo_iot é preenchido automaticamente a partir do dispositivo se não fornecido.</p>
 
         <strong>Body:</strong>
         <div class="code-container">
@@ -290,11 +309,13 @@
   "month_year": "2024-09",
   "company_consumption_kwh": 300,
   "real_consumption_kwh": 280,
+  "consumo_iot": 275.5,
   "amount_paid": 200.75,
   "price_per_kwh": 0.65
 }
 </code></pre>
         </div>
+        <p><strong>Nota:</strong> O campo consumo_iot pode ser omitido, sendo preenchido automaticamente com o valor do dispositivo.</p>
 
         <div class="response-title">Resposta:</div>
         <div class="code-container">
@@ -305,6 +326,7 @@
   "month_year": "2024-08",
   "company_consumption_kwh": 300,
   "real_consumption_kwh": 280,
+  "consumo_iot": 275.5,
   "amount_paid": 200.75,
   "price_per_kwh": 0.65,
   "device": {
@@ -331,6 +353,7 @@
     "month_year": "2024-08",
     "company_consumption_kwh": 300,
     "real_consumption_kwh": 280,
+    "consumo_iot": 275.5,
     "amount_paid": 200.75,
     "price_per_kwh": 0.65,
     "device": {
@@ -366,6 +389,7 @@
   "month_year": "2025-07",
   "company_consumption_kwh": 300,
   "real_consumption_kwh": 280,
+  "consumo_iot": 275.5,
   "amount_paid": 200.75,
   "price_per_kwh": 0.65,
   "device": {
@@ -396,9 +420,10 @@
     <h2>4. Dashboard</h2>
 
     <div class="token-note">
-        <strong>Atenção:</strong> A rota de dashboard também exige token JWT.
+        <strong>Atenção:</strong> Todas as rotas de dashboard exigem token JWT.
     </div>
 
+    <!-- GET DASHBOARD -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/dashboard
         <p>Retorna estatísticas gerais do consumo energético do usuário.</p>
@@ -413,6 +438,7 @@
       "month_year": "2025-07",
       "company_consumption_kwh": 300,
       "real_consumption_kwh": 300,
+      "consumo_iot": 295.5,
       "amount_paid": 180,
       "price_per_kwh": 0.4,
       "device": {
@@ -425,6 +451,68 @@
 }
 </code></pre>
         </div>
+    </div>
+
+    <!-- GET DASHBOARD ANALYTICS -->
+    <div class="endpoint">
+        <span class="method GET">GET</span> /api/dashboard/analytics
+        <p>Retorna análises estatísticas calculadas baseadas no consumo IoT das faturas do usuário.</p>
+
+        <div class="code-container">
+            <span class="status-badge success">200</span>
+<pre><code>{
+  "percentual": [
+    {
+      "device_id": 1,
+      "device_name": "Medidor da Sala",
+      "percentual": 45.5,
+      "total_consumo": 1500.75
+    }
+  ],
+  "media": {
+    "geral": 250.50,
+    "por_dispositivo": [
+      {
+        "device_id": 1,
+        "device_name": "Medidor da Sala",
+        "media": 250.50
+      }
+    ]
+  },
+  "desvio_padrao": 45.23,
+  "distribuicao_normal": {
+    "media": 250.50,
+    "desvio": 45.23
+  },
+  "correlacao": {
+    "consumo_estimado_real": 0.85,
+    "iot_valor": 0.92
+  },
+  "regressao": {
+    "a": 0.65,
+    "b": 10.5,
+    "r2": 0.85
+  }
+}
+</code></pre>
+        </div>
+        <p><strong>Descrição dos campos:</strong></p>
+        <ul>
+            <li><strong>percentual</strong>: Distribuição percentual do consumo IoT por dispositivo</li>
+            <li><strong>media.geral</strong>: Média geral do valor das faturas</li>
+            <li><strong>media.por_dispositivo</strong>: Média do valor das faturas agrupada por dispositivo</li>
+            <li><strong>desvio_padrao</strong>: Desvio padrão dos valores pagos</li>
+            <li><strong>distribuicao_normal</strong>: Parâmetros da distribuição normal (média e desvio padrão)</li>
+            <li><strong>correlacao.consumo_estimado_real</strong>: Correlação entre consumo estimado e consumo real</li>
+            <li><strong>correlacao.iot_valor</strong>: Correlação entre consumo IoT e valor pago</li>
+            <li><strong>regressao</strong>: Regressão linear entre consumo IoT (x) e valor pago (y): y = a*x + b, com R²</li>
+        </ul>
+    </div>
+
+    <div class="token-note" style="margin-top: 40px; padding: 15px;">
+        <strong>Observação Geral:</strong> Todas as rotas após o login exigem token JWT no header da requisição.<br>
+        <code>Authorization: Bearer SEU_TOKEN_AQUI</code><br><br>
+        O token é obtido através do endpoint <code>POST /api/auth/login</code> ou <code>POST /api/auth/register</code>.
     </div>
 
 </body>
