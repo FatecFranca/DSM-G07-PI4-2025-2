@@ -10,22 +10,37 @@ if (!connectionString) {
   process.exit(1);
 }
 
-// Configurar SSL para Supabase
-const sslConfig = connectionString.includes('supabase') 
-  ? { rejectUnauthorized: false }
-  : false;
-
+// Configura o pool de conexões
 const pool = new Pool({
   connectionString,
-  ssl: sslConfig,
+  ssl: false, // desativa SSL para local
   max: 5,
   min: 0,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });
 
-pool.on('error', (err) => {
-  console.error('Database error:', err.message);
+// Eventos do pool
+pool.on('connect', () => {
+  console.log('✅ Conexão com PostgreSQL estabelecida!');
 });
+
+pool.on('error', (err) => {
+  console.error('❌ Database error:', err.message);
+});
+
+// Função de validação da conexão
+const validateConnection = async () => {
+  try {
+    const res = await pool.query('SELECT NOW() AS server_time');
+    console.log('🕒 PostgreSQL funcionando! Hora do servidor:', res.rows[0].server_time);
+  } catch (err) {
+    console.error('❌ Falha ao validar conexão com PostgreSQL:', err.message);
+    process.exit(1);
+  }
+};
+
+// Executa a validação ao iniciar o backend
+validateConnection();
 
 export default pool;
