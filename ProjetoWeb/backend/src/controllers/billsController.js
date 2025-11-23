@@ -1,5 +1,14 @@
 import * as BillModel from '../models/Bill.js';
 
+function addOneMonth(yyyyMm) {
+  let [year, month] = yyyyMm.split("-").map(Number);
+  month++;
+  if (month > 12) { month = 1; year++; }
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+
+
 export const getBills = async (req, res) => {
   try {
     const bills = await BillModel.findAll(req.userId);
@@ -23,27 +32,43 @@ export const getBill = async (req, res) => {
 
 export const createBill = async (req, res) => {
   try {
-    const { device_id, month_year, company_consumption_kwh, consumo_iot, amount_paid, price_per_kwh } = req.body;
-    if (!device_id || !month_year || company_consumption_kwh === undefined || !amount_paid || !price_per_kwh) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    const data = req.body;
+
+    if (!data.device_id || !data.month_year || data.company_consumption_kwh === undefined ||
+        !data.amount_paid || !data.price_per_kwh) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
-    const bill = await BillModel.create({ device_id, month_year, company_consumption_kwh, consumo_iot, amount_paid, price_per_kwh }, req.userId);
+
+    data.month_year = addOneMonth(data.month_year.slice(0, 7));
+
+    const bill = await BillModel.create(data, req.userId);
     res.status(201).json(bill);
+
   } catch (error) {
-    const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
+
 export const updateBill = async (req, res) => {
   try {
-    const bill = await BillModel.update(req.params.id, req.body, req.userId);
-    if (!bill) return res.status(404).json({ error: 'Bill not found' });
+    const data = req.body;
+
+    if (data.month_year) {
+      data.month_year = addOneMonth(data.month_year.slice(0, 7));
+    }
+
+    const bill = await BillModel.update(req.params.id, data, req.userId);
+    if (!bill) return res.status(404).json({ error: "Bill not found" });
+
     res.json(bill);
+
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
 
 export const deleteBill = async (req, res) => {
   try {

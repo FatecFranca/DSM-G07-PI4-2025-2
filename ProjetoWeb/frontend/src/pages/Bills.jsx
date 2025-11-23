@@ -25,6 +25,8 @@ export default function Bills() {
     consumo_iot: "",
   });
   const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,7 +47,6 @@ export default function Bills() {
         consumo_iot: d.consumo_iot 
       })));
     } catch (error) {
-      // Tenta carregar dispositivos mesmo se bills falhar
       try {
         const devicesData = await api.getDevices();
         const devicesArray = Array.isArray(devicesData) ? devicesData : [];
@@ -55,25 +56,18 @@ export default function Bills() {
           consumo_iot: d.consumo_iot
         })));
       } catch (devicesError) {
-        // Silenciar erro de dispositivos também
+        // Silenciar erro
       }
-      /*toast({
-        title: "Erro",
-        description: "Erro ao carregar dados",
-        variant: "destructive",
-      });*/
     }
   };
 
   const handleDeviceChange = async (deviceId) => {
     setFormData({ ...formData, device_id: deviceId });
     
-    // Buscar o dispositivo selecionado para obter o consumo_iot
     const selectedDevice = devices.find(d => String(d.id) === String(deviceId));
     if (selectedDevice && selectedDevice.consumo_iot !== null && selectedDevice.consumo_iot !== undefined) {
       setFormData(prev => ({ ...prev, device_id: deviceId, consumo_iot: String(selectedDevice.consumo_iot) }));
     } else {
-      // Se não tiver no array local, buscar da API
       try {
         const device = await api.getDevice(deviceId);
         if (device && device.consumo_iot !== null && device.consumo_iot !== undefined) {
@@ -92,7 +86,6 @@ export default function Bills() {
     setLoading(true);
 
     try {
-      // Validate that the selected device belongs to the user's devices list
       const deviceExists = devices.find(d => String(d.id) === String(formData.device_id));
       if (!deviceExists) throw new Error('O dispositivo selecionado não pertence ao usuário');
 
@@ -135,22 +128,29 @@ export default function Bills() {
     }
   };
 
-const handleEdit = (bill) => {
-  setFormData({
-    month_year: bill.month_year || '',
-    company_consumption_kwh: bill.company_consumption_kwh || '',
-    amount_paid: bill.amount_paid || '',
-    price_per_kwh: bill.price_per_kwh || '',
-    device_id: String(bill.device_id) || '',
-    consumo_iot: bill.consumo_iot ? String(bill.consumo_iot) : '',
-  });
-  setEditingId(bill.id);
-  setIsOpen(true);
-};
+  const handleEdit = (bill) => {
+    setFormData({
+      month_year: bill.month_year || '',
+      company_consumption_kwh: bill.company_consumption_kwh || '',
+      amount_paid: bill.amount_paid || '',
+      price_per_kwh: bill.price_per_kwh || '',
+      device_id: String(bill.device_id) || '',
+      consumo_iot: bill.consumo_iot ? String(bill.consumo_iot) : '',
+    });
+    setEditingId(bill.id);
+    setIsOpen(true);
+  };
 
-  const handleDelete = async (id) => {
+  const handleDeleteClick = (id) => {
+    setDeletingId(id);
+    setConfirmDeleteOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingId) return;
+    
     try {
-      await api.deleteBill(id);
+      await api.deleteBill(deletingId);
       toast({
         title: "Sucesso",
         description: "Fatura excluída com sucesso!",
@@ -162,26 +162,55 @@ const handleEdit = (bill) => {
         description: error instanceof Error ? error.message : "Erro ao excluir fatura",
         variant: "destructive",
       });
+    } finally {
+      setConfirmDeleteOpen(false);
+      setDeletingId(null);
     }
   };
 
+  // --- LÓGICA CORRIGIDA DE CÁLCULO ---
   const getStatusBadge = (bill) => {
-    if (!bill.consumo_iot) {
-      return <Badge variant="secondary">Sem consumo IoT</Badge>;
+
+    // Conversão segura para números
+    const consumoIoT = Number(bill.consumo_iot);
+    const pricePerKwh = Number(bill.price_per_kwh);
+    const amountPaid = Number(bill.amount_paid);
+
+
+
+    // Se faltar dados essenciais
+    if (!consumoIoT || !pricePerKwh) {
+      return <Badge variant="secondary">Sem dados IoT</Badge>;
     }
 
-    const iotValue = bill.consumo_iot * bill.price_per_kwh;
-    const paidValue = bill.amount_paid;
-    const diff = Math.abs(iotValue - paidValue) / paidValue;
+    // Cálculo: Quanto deveria custar segundo o IoT?
+    const expectedCost = consumoIoT * pricePerKwh;
 
-    if (diff <= 0.05) {
-      return <Badge className="bg-energy-ok text-white">Correto ✅</Badge>;
-    } else if (paidValue > iotValue) {
-      return <Badge className="bg-energy-danger text-white">Pagando a mais ⚠️</Badge>;
-    } else {
-      return <Badge className="bg-energy-warning text-white">Pagando a menos ❌</Badge>;
+    // Diferença: Valor pago - Valor esperado
+    const difference = amountPaid - expectedCost;
+    
+    // Diferença percentual para tolerância
+    const percentDiff = Math.abs(difference / expectedCost);
+
+    // Tolerância de 5% é considerada correta
+    if (percentDiff <= 0.00) {
+       return <Badge className="bg-green-600 hover:bg-green-700 text-white">Correto ✅</Badge>;
+    } 
+    // Se pagou mais do que o IoT calculou (diferença positiva)
+    else if (difference > 0) {
+       return (
+         <Badge className="bg-red-600 hover:bg-red-700 text-white" title={`Deveria ser aprox. R$ ${expectedCost.toFixed(2)}`}>
+            Pagando a mais ⚠️
+         </Badge>
+       );
+    } 
+    // Se pagou menos do que o IoT calculou (diferença negativa)
+    else {
+       return <Badge className="bg-yellow-600 hover:bg-yellow-700 text-white">Pagando a menos ❌</Badge>;
     }
   };
+
+
 
   return (
     <div className="space-y-6">
@@ -348,7 +377,8 @@ const handleEdit = (bill) => {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {new Date(bill.month_year + "-01").toLocaleDateString("pt-BR", {
+                        {/* --- CORREÇÃO DE DATA AQUI (T12:00:00) --- */}
+                        {new Date(bill.month_year + "-01T12:00:00").toLocaleDateString("pt-BR", {
                           month: "long",
                           year: "numeric"
                         })}
@@ -362,37 +392,31 @@ const handleEdit = (bill) => {
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        {bill.amount_paid.toLocaleString("pt-BR", {
+                        {Number(bill.amount_paid).toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL"
                         })}
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(bill)}</TableCell>
-<TableCell className="flex gap-2">
-
-  {/* Botão de Editar */}
-  <Button
-    variant="ghost"
-    size="sm"
-    onClick={() => handleEdit(bill)}
-    className="text-blue-500 hover:text-blue-600"
-  >
-    <Edit className="h-4 w-4" />
-  </Button>
-
-  {/* Botão de Deletar */}
-  <Button
-    variant="ghost"
-    size="sm"
-    onClick={() => handleDelete(bill.id)}
-    className="text-destructive hover:text-destructive"
-  >
-    <Trash2 className="h-4 w-4" />
-  </Button>
-
-</TableCell>
-
+                    <TableCell className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(bill)}
+                        className="text-blue-500 hover:text-blue-600"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteClick(bill.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -400,6 +424,35 @@ const handleEdit = (bill) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir esta fatura? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDeleteOpen(false);
+                setDeletingId(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -156,6 +156,18 @@ async function getDashboardAnalytics() {
   return request('/dashboard/analytics');
 }
 
+async function getMediaGeral() {
+  return request('/dashboard/media-geral');
+}
+
+async function getDesvioPadrao() {
+  return request('/dashboard/desvio-padrao');
+}
+
+async function getProbabilidadeProximoMes(min, max) {
+  return request(`/dashboard/probabilidade-proximo-mes?min=${min}&max=${max}`);
+}
+
 export const api = {
   register,
   login,
@@ -173,6 +185,9 @@ export const api = {
   deleteBill,
   getDashboard,
   getDashboardAnalytics,
+  getMediaGeral,
+  getDesvioPadrao,
+  getProbabilidadeProximoMes,
   testConnection,
 };
 

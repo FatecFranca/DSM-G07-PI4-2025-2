@@ -10,7 +10,7 @@ const createTables = async () => {
     await client.query('BEGIN');
 
     // ============================
-    // Tabela de usuários
+    // TABELA: tb_usuarios
     // ============================
     await client.query(`
       CREATE TABLE IF NOT EXISTS tb_usuarios (
@@ -22,7 +22,7 @@ const createTables = async () => {
     `);
 
     // ============================
-    // Tabela de dispositivos
+    // TABELA: tb_dispositivos
     // ============================
     await client.query(`
       CREATE TABLE IF NOT EXISTS tb_dispositivos (
@@ -41,14 +41,17 @@ const createTables = async () => {
     `);
 
     // ============================
-    // Tabela de faturas
+    // TABELA: tb_fatura
     // ============================
     await client.query(`
       CREATE TABLE IF NOT EXISTS tb_fatura (
         id SERIAL PRIMARY KEY,
-        id_disp INT NOT NULL REFERENCES tb_dispositivos(id),
+
+        id_disp INT NOT NULL REFERENCES tb_dispositivos(id) ON DELETE CASCADE,
         id_user INT NOT NULL REFERENCES tb_usuarios(id) ON DELETE CASCADE,
+
         data DATE NOT NULL,
+
         consumo_estimado NUMERIC(10,2) NOT NULL,
         consumo_iot NUMERIC(10,2) NOT NULL,
         valor_pago NUMERIC(10,2) NOT NULL,
@@ -67,7 +70,7 @@ const createTables = async () => {
     `);
 
     // ============================
-    // Trigger: valida se o dispositivo pertence a um usuário
+    // TRIGGER: valida se o dispositivo pertence ao usuário
     // ============================
     await client.query(`
       CREATE OR REPLACE FUNCTION check_bill_device_owner()
@@ -75,7 +78,8 @@ const createTables = async () => {
       BEGIN
         PERFORM 1 
         FROM tb_dispositivos 
-        WHERE id = NEW.id_disp AND id_user IS NOT NULL;
+        WHERE id = NEW.id_disp 
+        AND id_user IS NOT NULL;
 
         IF NOT FOUND THEN
           RAISE EXCEPTION 'Device does not exist or is not owned by a user';
@@ -86,9 +90,7 @@ const createTables = async () => {
       $$ LANGUAGE plpgsql;
     `);
 
-    await client.query(`
-      DROP TRIGGER IF EXISTS trg_check_bill_device_owner ON tb_fatura;
-    `);
+    await client.query(`DROP TRIGGER IF EXISTS trg_check_bill_device_owner ON tb_fatura`);
 
     await client.query(`
       CREATE TRIGGER trg_check_bill_device_owner
@@ -97,8 +99,28 @@ const createTables = async () => {
       EXECUTE FUNCTION check_bill_device_owner();
     `);
 
+    // ============================
+    // TABELA: tb_consumo_horario (NOVA)
+    // ============================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tb_consumo_horario (
+        id SERIAL PRIMARY KEY,
+        id_disp INT NOT NULL REFERENCES tb_dispositivos(id) ON DELETE CASCADE,
+        timestamp_fim TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+        consumo_wh NUMERIC(10,4) NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_consumo_horario_disp_time
+      ON tb_consumo_horario(id_disp, timestamp_fim)
+    `);
+
+    // ============================
+    // FINALIZAÇÃO
+    // ============================
     await client.query('COMMIT');
-    console.log('✅ Tabelas e trigger criadas com sucesso!');
+    console.log('✅ Tabelas + trigger + tb_consumo_horario criados com sucesso!');
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Erro ao criar tabelas/triggers:', error.message);

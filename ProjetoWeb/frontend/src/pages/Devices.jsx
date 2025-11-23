@@ -19,6 +19,8 @@ export default function Devices() {
     property_address: "",
   });
   const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,9 +73,16 @@ export default function Devices() {
     setIsOpen(true);
   };
 
-    const handleDelete = async (id) => {
+  const handleDeleteClick = (id) => {
+    setDeletingId(id);
+    setConfirmDeleteOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingId) return;
+    
     try {
-      await api.deleteDevice(id);
+      await api.deleteDevice(deletingId);
       toast({
         title: "Sucesso",
         description: "Dispositivo excluído com sucesso!",
@@ -85,6 +94,9 @@ export default function Devices() {
         description: error instanceof Error ? error.message : "Erro ao excluir dispositivo",
         variant: "destructive",
       });
+    } finally {
+      setConfirmDeleteOpen(false);
+      setDeletingId(null);
     }
   };
 
@@ -180,7 +192,7 @@ export default function Devices() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(device.id)}
+                    onClick={() => handleDeleteClick(device.id)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -211,6 +223,35 @@ export default function Devices() {
           ))}
         </div>
       )}
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir este dispositivo? Esta ação não pode ser desfeita e todas as faturas associadas serão mantidas.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDeleteOpen(false);
+                setDeletingId(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

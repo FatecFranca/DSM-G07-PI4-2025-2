@@ -461,12 +461,10 @@
         <div class="code-container">
             <span class="status-badge success">200</span>
 <pre><code>{
-  "percentual": [
+  "distribuicao_dispositivos": [
     {
-      "device_id": 1,
-      "device_name": "Medidor da Sala",
-      "percentual": 45.5,
-      "total_consumo": 1500.75
+      "device": "Medidor da Sala",
+      "percentual": 45.5
     }
   ],
   "media": {
@@ -485,7 +483,7 @@
     "desvio": 45.23
   },
   "correlacao": {
-    "consumo_estimado_real": 0.85,
+    "consumo_estimado_iot": 0.85,
     "iot_valor": 0.92
   },
   "regressao": {
@@ -498,15 +496,73 @@
         </div>
         <p><strong>Descrição dos campos:</strong></p>
         <ul>
-            <li><strong>percentual</strong>: Distribuição percentual do consumo IoT por dispositivo</li>
+            <li><strong>distribuicao_dispositivos</strong>: Distribuição percentual do consumo IoT por dispositivo</li>
             <li><strong>media.geral</strong>: Média geral do valor das faturas</li>
             <li><strong>media.por_dispositivo</strong>: Média do valor das faturas agrupada por dispositivo</li>
             <li><strong>desvio_padrao</strong>: Desvio padrão dos valores pagos</li>
             <li><strong>distribuicao_normal</strong>: Parâmetros da distribuição normal (média e desvio padrão)</li>
-            <li><strong>correlacao.consumo_estimado_real</strong>: Correlação entre consumo estimado e consumo real</li>
+            <li><strong>correlacao.consumo_estimado_iot</strong>: Correlação entre consumo estimado e consumo IoT</li>
             <li><strong>correlacao.iot_valor</strong>: Correlação entre consumo IoT e valor pago</li>
             <li><strong>regressao</strong>: Regressão linear entre consumo IoT (x) e valor pago (y): y = a*x + b, com R²</li>
         </ul>
+    </div>
+
+    <!-- GET MEDIA GERAL -->
+    <div class="endpoint">
+        <span class="method GET">GET</span> /api/dashboard/media-geral
+        <p>Retorna a média geral do valor de todas as faturas do usuário.</p>
+
+        <div class="code-container">
+            <span class="status-badge success">200</span>
+<pre><code>{
+  "mediaGeral": 250.50
+}
+</code></pre>
+        </div>
+    </div>
+
+    <!-- GET DESVIO PADRAO -->
+    <div class="endpoint">
+        <span class="method GET">GET</span> /api/dashboard/desvio-padrao
+        <p>Retorna o desvio padrão do valor de todas as faturas do usuário.</p>
+
+        <div class="code-container">
+            <span class="status-badge success">200</span>
+<pre><code>{
+  "desvioPadrao": 45.23
+}
+</code></pre>
+        </div>
+    </div>
+
+    <!-- GET PROBABILIDADE PROXIMO MES -->
+    <div class="endpoint">
+        <span class="method GET">GET</span> /api/dashboard/probabilidade-proximo-mes
+        <p>Calcula a probabilidade da próxima fatura estar entre dois valores usando distribuição normal.</p>
+
+        <strong>Query Parameters:</strong>
+        <div class="code-container">
+<pre><code>?min=200&max=300
+</code></pre>
+        </div>
+        <p><strong>Parâmetros:</strong></p>
+        <ul>
+            <li><strong>min</strong> (obrigatório): Valor mínimo do intervalo</li>
+            <li><strong>max</strong> (obrigatório): Valor máximo do intervalo</li>
+        </ul>
+
+        <div class="response-title">Resposta:</div>
+        <div class="code-container">
+            <span class="status-badge success">200</span>
+<pre><code>{
+  "probabilidadeProximoMes": 72.50
+}
+</code></pre>
+        </div>
+        <p><strong>Descrição:</strong></p>
+        <p>O cálculo utiliza distribuição normal com a fórmula: z = (valor - media_geral) / desvio_padrao</p>
+        <p>A probabilidade é calculada como P(min ≤ X ≤ max) = CDF(z_max) - CDF(z_min), onde CDF é a função de distribuição acumulada da normal padrão.</p>
+        <p>O resultado é retornado em porcentagem (0 a 100).</p>
     </div>
 
     <div class="token-note" style="margin-top: 40px; padding: 15px;">
