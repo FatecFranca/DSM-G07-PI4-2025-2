@@ -14,7 +14,7 @@ export const getBills = async (req, res) => {
     const bills = await BillModel.findAll(req.userId);
     res.json(bills);
   } catch (error) {
-    const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';
+    const message = process.env.NODE_ENV === 'development' ? error.message : 'Erro ao trazer faturas!';
     console.error('Error getting bills:', error);
     res.status(500).json({ error: message });
   }
@@ -26,7 +26,7 @@ export const getBill = async (req, res) => {
     if (!bill) return res.status(404).json({ error: 'Bill not found' });
     res.json(bill);
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Erro ao buscar faturas!' });
   }
 };
 
@@ -45,7 +45,7 @@ export const createBill = async (req, res) => {
     res.status(201).json(bill);
 
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Erro ao criar fatura!" });
   }
 };
 
@@ -64,7 +64,7 @@ export const updateBill = async (req, res) => {
     res.json(bill);
 
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Erro ao atualizar fatura!" });
   }
 };
 
@@ -76,6 +76,6 @@ export const deleteBill = async (req, res) => {
     if (!deleted) return res.status(404).json({ error: 'Bill not found' });
     res.status(200).json({message: "Fatura deletada com sucesso!"});
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Erro ao deletar fatura!' });
   }
 };

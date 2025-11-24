@@ -5,7 +5,7 @@ export const getDashboard = async (req, res) => {
     const bills = await BillModel.findAllForDashboard(req.userId);
     res.json({ bills });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Erro ao buscar os dados!' });
   }
 };
 
@@ -202,7 +202,7 @@ export const getAnalytics = async (req, res) => {
       regressao
     });
   } catch (error) {
-    const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';
+    const message = process.env.NODE_ENV === 'development' ? error.message : 'Erro ao buscar os dados!';
     res.status(500).json({ error: message });
   }
 };
@@ -247,7 +247,7 @@ export const getMediaGeral = async (req, res) => {
       mediaGeral: isNaN(mediaGeral) ? 0 : Number(mediaGeral.toFixed(2))
     });
   } catch (error) {
-    const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';
+    const message = process.env.NODE_ENV === 'development' ? error.message : 'Erro ao buscar os dados!';
     res.status(500).json({ error: message });
   }
 };
@@ -269,7 +269,7 @@ export const getDesvioPadrao = async (req, res) => {
       desvioPadrao: isNaN(desvioPadrao) ? 0 : Number(desvioPadrao.toFixed(2))
     });
   } catch (error) {
-    const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';
+    const message = process.env.NODE_ENV === 'development' ? error.message : 'Erro ao buscar os dados!';
     res.status(500).json({ error: message });
   }
 };
@@ -335,7 +335,7 @@ export const getProbabilidadeProximoMes = async (req, res) => {
       probabilidadeProximoMes: isNaN(probabilidadePorcentagem) ? 0 : Number(probabilidadePorcentagem.toFixed(2))
     });
   } catch (error) {
-    const message = process.env.NODE_ENV === 'development' ? error.message : 'Internal server error';
+    const message = process.env.NODE_ENV === 'development' ? error.message : 'Erro ao buscar os dados!';
     res.status(500).json({ error: message });
   }
 };

@@ -30,7 +30,7 @@ export const register = async (req, res) => {
     if (error.code === '23505') {
       return res.status(400).json({ error: 'User already exists' });
     }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Erro ao fazer cadastro!' });
   }
 };
 
@@ -52,7 +52,7 @@ export const login = async (req, res) => {
       token
     });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Erro ao fazer login!' });
   }
 };
 
@@ -64,7 +64,7 @@ export const getMe = async (req, res) => {
     }
     res.json({ user: { id: user.id, email: user.email, nome: user.nome } });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Erro ao trazer dados!' });
   }
 };
 

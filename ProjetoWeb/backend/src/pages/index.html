@@ -112,10 +112,8 @@
         <h1> Documentação da API — Gestão de Energia</h1>
     </header>
 
-    <!-- AUTH -->
     <h2>1. Autenticação</h2>
 
-    <!-- REGISTER -->
     <div class="endpoint">
         <span class="method POST">POST</span> /api/auth/register
         <p>Cria um novo usuário na plataforma.</p>
@@ -139,13 +137,12 @@
     "email": "ana@email.com",
     "nome": "Ana Souza"
   },
-  "token": "TOKEN_AQUI"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 </code></pre>
         </div>
     </div>
 
-    <!-- LOGIN -->
     <div class="endpoint">
         <span class="method POST">POST</span> /api/auth/login
         <p>Autentica o usuário e retorna um token JWT.</p>
@@ -168,13 +165,34 @@
     "email": "ana@email.com",
     "nome": "Ana Souza"
   },
-  "token": "TOKEN_AQUI"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 </code></pre>
         </div>
     </div>
 
-    <!-- DISPOSITIVOS -->
+    <div class="endpoint">
+        <span class="method GET">GET</span> /api/auth/me
+        <p>Retorna os dados do usuário autenticado atual.</p>
+        
+        <div class="token-note">
+            Requer Header: <code>Authorization: Bearer SEU_TOKEN</code>
+        </div>
+
+        <div class="response-title">Resposta:</div>
+        <div class="code-container">
+            <span class="status-badge success">200</span>
+<pre><code>{
+  "user": {
+    "id": 3,
+    "email": "ana@email.com",
+    "nome": "Ana Souza"
+  }
+}
+</code></pre>
+        </div>
+    </div>
+
     <h2>2. Dispositivos</h2>
 
     <div class="token-note">
@@ -182,16 +200,14 @@
         <code>Authorization: Bearer SEU_TOKEN_AQUI</code>
     </div>
 
-    <!-- CREATE DEVICE -->
     <div class="endpoint">
         <span class="method POST">POST</span> /api/devices
-        <p>Cria um dispositivo associado ao usuário logado.</p>
+        <p>Cria um dispositivo associado ao usuário logado. O código de identificação é gerado automaticamente (ex: REL001).</p>
 
         <strong>Body:</strong>
         <div class="code-container">
 <pre><code>{
   "name": "Medidor da Sala",
-  "identification_code": "XYZ-100",
   "property_address": "Rua A, 123"
 }
 </code></pre>
@@ -202,14 +218,13 @@
             <span class="status-badge created">201</span>
 <pre><code>{
   "name": "Medidor da Sala",
-  "identification_code": "XYZ-100",
+  "identification_code": "REL002",
   "property_address": "Rua A, 123"
 }
 </code></pre>
         </div>
     </div>
 
-    <!-- GET DEVICES -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/devices
         <p>Retorna todos os dispositivos do usuário autenticado.</p>
@@ -220,7 +235,7 @@
   {
     "id": 3,
     "name": "Medidor da Sala",
-    "identification_code": "XYZ-100",
+    "identification_code": "REL002",
     "property_address": "Rua A, 123",
     "consumo_iot": 150.50
   }
@@ -229,7 +244,6 @@
         </div>
     </div>
 
-    <!-- GET DEVICE BY ID -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/devices/:id
         <p>Retorna um dispositivo específico pelo ID.</p>
@@ -239,7 +253,7 @@
 <pre><code>{
   "id": 3,
   "name": "Medidor da Sala",
-  "identification_code": "XYZ-100",
+  "identification_code": "REL002",
   "property_address": "Rua A, 123",
   "consumo_iot": 150.50
 }
@@ -247,7 +261,6 @@
         </div>
     </div>
 
-    <!-- UPDATE DEVICE -->
     <div class="endpoint">
         <span class="method PUT">PUT</span> /api/devices/3
         <p>Atualiza os dados de um dispositivo.</p>
@@ -255,10 +268,8 @@
         <strong>Body:</strong>
         <div class="code-container">
 <pre><code>{
-  "id": 3,
-  "name": "Medidor da Sala",
-  "identification_code": "XYZ-100",
-  "property_address": "Rua das Couves"
+  "name": "Medidor da Sala (Atualizado)",
+  "property_address": "Rua das Couves, 50"
 }
 </code></pre>
         </div>
@@ -268,15 +279,14 @@
             <span class="status-badge success">200</span>
 <pre><code>{
   "id": 3,
-  "name": "Medidor da Sala",
-  "identification_code": "XYZ-100",
-  "property_address": "Rua das Couves"
+  "name": "Medidor da Sala (Atualizado)",
+  "identification_code": "REL002",
+  "property_address": "Rua das Couves, 50"
 }
 </code></pre>
         </div>
     </div>
 
-    <!-- DELETE DEVICE -->
     <div class="endpoint">
         <span class="method DELETE">DELETE</span> /api/devices/3
         <p>Remove um dispositivo.</p>
@@ -290,17 +300,15 @@
         </div>
     </div>
 
-    <!-- BILLS -->
     <h2>3. Faturas</h2>
 
     <div class="token-note">
         <strong>Atenção:</strong> Todas as rotas de faturas exigem o token JWT no header.
     </div>
 
-    <!-- CREATE BILL -->
     <div class="endpoint">
         <span class="method POST">POST</span> /api/bills
-        <p>Cria uma fatura para um dispositivo do usuário. O campo consumo_iot é preenchido automaticamente a partir do dispositivo se não fornecido.</p>
+        <p>Cria uma fatura para um dispositivo. O sistema adicionará automaticamente 1 mês à data enviada (lógica de fechamento).</p>
 
         <strong>Body:</strong>
         <div class="code-container">
@@ -315,7 +323,7 @@
 }
 </code></pre>
         </div>
-        <p><strong>Nota:</strong> O campo consumo_iot pode ser omitido, sendo preenchido automaticamente com o valor do dispositivo.</p>
+        <p><strong>Campos Obrigatórios:</strong> device_id, month_year, company_consumption_kwh, amount_paid, price_per_kwh.</p>
 
         <div class="response-title">Resposta:</div>
         <div class="code-container">
@@ -323,7 +331,7 @@
 <pre><code>{
   "id": 3,
   "device_id": 4,
-  "month_year": "2024-08",
+  "month_year": "2024-10", 
   "company_consumption_kwh": 300,
   "real_consumption_kwh": 280,
   "consumo_iot": 275.5,
@@ -332,14 +340,13 @@
   "device": {
     "id": 4,
     "name": "Medidor da Sala",
-    "identification_code": "XYZ-100"
+    "identification_code": "REL002"
   }
 }
 </code></pre>
         </div>
     </div>
 
-    <!-- GET BILLS -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/bills
         <p>Lista todas as faturas do usuário autenticado.</p>
@@ -350,16 +357,13 @@
   {
     "id": 3,
     "device_id": 4,
-    "month_year": "2024-08",
+    "month_year": "2024-10",
     "company_consumption_kwh": 300,
-    "real_consumption_kwh": 280,
-    "consumo_iot": 275.5,
     "amount_paid": 200.75,
-    "price_per_kwh": 0.65,
     "device": {
       "id": 4,
       "name": "Medidor da Sala",
-      "identification_code": "XYZ-100"
+      "identification_code": "REL002"
     }
   }
 ]
@@ -367,7 +371,6 @@
         </div>
     </div>
 
-    <!-- UPDATE BILL -->
     <div class="endpoint">
         <span class="method PUT">PUT</span> /api/bills/3
         <p>Edita uma fatura já cadastrada.</p>
@@ -375,7 +378,8 @@
         <strong>Body:</strong>
         <div class="code-container">
 <pre><code>{
-  "month_year": "2025-08"
+  "amount_paid": 210.50,
+  "month_year": "2024-09"
 }
 </code></pre>
         </div>
@@ -386,23 +390,19 @@
 <pre><code>{
   "id": 3,
   "device_id": 4,
-  "month_year": "2025-07",
+  "month_year": "2024-10",
+  "amount_paid": 210.50,
   "company_consumption_kwh": 300,
-  "real_consumption_kwh": 280,
-  "consumo_iot": 275.5,
-  "amount_paid": 200.75,
-  "price_per_kwh": 0.65,
   "device": {
     "id": 4,
     "name": "Medidor da Sala",
-    "identification_code": "XYZ-100"
+    "identification_code": "REL002"
   }
 }
 </code></pre>
         </div>
     </div>
 
-    <!-- DELETE BILL -->
     <div class="endpoint">
         <span class="method DELETE">DELETE</span> /api/bills/3
         <p>Remove uma fatura.</p>
@@ -416,17 +416,15 @@
         </div>
     </div>
 
-    <!-- DASHBOARD -->
     <h2>4. Dashboard</h2>
 
     <div class="token-note">
         <strong>Atenção:</strong> Todas as rotas de dashboard exigem token JWT.
     </div>
 
-    <!-- GET DASHBOARD -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/dashboard
-        <p>Retorna estatísticas gerais do consumo energético do usuário.</p>
+        <p>Retorna os dados brutos das faturas para o dashboard.</p>
 
         <div class="code-container">
             <span class="status-badge success">200</span>
@@ -437,14 +435,11 @@
       "device_id": 1,
       "month_year": "2025-07",
       "company_consumption_kwh": 300,
-      "real_consumption_kwh": 300,
-      "consumo_iot": 295.5,
       "amount_paid": 180,
-      "price_per_kwh": 0.4,
       "device": {
         "id": 1,
         "name": "Carregador Iphone",
-        "identification_code": "1234567"
+        "identification_code": "REL001"
       }
     }
   ]
@@ -453,7 +448,6 @@
         </div>
     </div>
 
-    <!-- GET DASHBOARD ANALYTICS -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/dashboard/analytics
         <p>Retorna análises estatísticas calculadas baseadas no consumo IoT das faturas do usuário.</p>
@@ -501,16 +495,14 @@
             <li><strong>media.por_dispositivo</strong>: Média do valor das faturas agrupada por dispositivo</li>
             <li><strong>desvio_padrao</strong>: Desvio padrão dos valores pagos</li>
             <li><strong>distribuicao_normal</strong>: Parâmetros da distribuição normal (média e desvio padrão)</li>
-            <li><strong>correlacao.consumo_estimado_iot</strong>: Correlação entre consumo estimado e consumo IoT</li>
-            <li><strong>correlacao.iot_valor</strong>: Correlação entre consumo IoT e valor pago</li>
-            <li><strong>regressao</strong>: Regressão linear entre consumo IoT (x) e valor pago (y): y = a*x + b, com R²</li>
+            <li><strong>correlacao</strong>: Correlações de Pearson entre consumos e valores</li>
+            <li><strong>regressao</strong>: Regressão linear (y = ax + b) entre consumo IoT e valor pago</li>
         </ul>
     </div>
 
-    <!-- GET MEDIA GERAL -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/dashboard/media-geral
-        <p>Retorna a média geral do valor de todas as faturas do usuário.</p>
+        <p>Retorna apenas a média geral do valor de todas as faturas do usuário.</p>
 
         <div class="code-container">
             <span class="status-badge success">200</span>
@@ -521,10 +513,9 @@
         </div>
     </div>
 
-    <!-- GET DESVIO PADRAO -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/dashboard/desvio-padrao
-        <p>Retorna o desvio padrão do valor de todas as faturas do usuário.</p>
+        <p>Retorna apenas o desvio padrão do valor das faturas.</p>
 
         <div class="code-container">
             <span class="status-badge success">200</span>
@@ -535,21 +526,15 @@
         </div>
     </div>
 
-    <!-- GET PROBABILIDADE PROXIMO MES -->
     <div class="endpoint">
         <span class="method GET">GET</span> /api/dashboard/probabilidade-proximo-mes
-        <p>Calcula a probabilidade da próxima fatura estar entre dois valores usando distribuição normal.</p>
+        <p>Calcula a probabilidade da próxima fatura estar entre dois valores (min e max).</p>
 
         <strong>Query Parameters:</strong>
         <div class="code-container">
 <pre><code>?min=200&max=300
 </code></pre>
         </div>
-        <p><strong>Parâmetros:</strong></p>
-        <ul>
-            <li><strong>min</strong> (obrigatório): Valor mínimo do intervalo</li>
-            <li><strong>max</strong> (obrigatório): Valor máximo do intervalo</li>
-        </ul>
 
         <div class="response-title">Resposta:</div>
         <div class="code-container">
@@ -559,16 +544,12 @@
 }
 </code></pre>
         </div>
-        <p><strong>Descrição:</strong></p>
-        <p>O cálculo utiliza distribuição normal com a fórmula: z = (valor - media_geral) / desvio_padrao</p>
-        <p>A probabilidade é calculada como P(min ≤ X ≤ max) = CDF(z_max) - CDF(z_min), onde CDF é a função de distribuição acumulada da normal padrão.</p>
-        <p>O resultado é retornado em porcentagem (0 a 100).</p>
+        <p>Retorna a porcentagem de probabilidade baseada na distribuição normal dos dados históricos.</p>
     </div>
 
     <div class="token-note" style="margin-top: 40px; padding: 15px;">
-        <strong>Observação Geral:</strong> Todas as rotas após o login exigem token JWT no header da requisição.<br>
-        <code>Authorization: Bearer SEU_TOKEN_AQUI</code><br><br>
-        O token é obtido através do endpoint <code>POST /api/auth/login</code> ou <code>POST /api/auth/register</code>.
+        <strong>Observação Geral:</strong><br>
+        O token deve ser enviado no formato <code>Bearer &lt;token&gt;</code> no header <code>Authorization</code>.
     </div>
 
 </body>

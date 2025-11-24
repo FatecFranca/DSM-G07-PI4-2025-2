@@ -13,11 +13,15 @@ CREATE TABLE tb_usuarios (
 -- ============================
 CREATE TABLE tb_dispositivos (
     id SERIAL PRIMARY KEY,
+    
     id_user INT NOT NULL REFERENCES tb_usuarios(id) ON DELETE CASCADE,
 
     nome_disp VARCHAR(100) NOT NULL,
-    codigo VARCHAR(100) UNIQUE NOT NULL,
+
+    codigo VARCHAR(100) NOT NULL,
+
     consumo_iot NUMERIC(10,2),
+
     endereco VARCHAR(200) NOT NULL
 );
 
@@ -67,18 +71,3 @@ FOR EACH ROW
 EXECUTE FUNCTION check_bill_device_owner();
 
 -- ============================
--- TABELA: tb_consumo_horario (NOVO)
--- ============================
-CREATE TABLE tb_consumo_horario (
-    id SERIAL PRIMARY KEY,
-
-    id_disp INT NOT NULL REFERENCES tb_dispositivos(id) ON DELETE CASCADE,
-
-    timestamp_fim TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
-
-    consumo_wh NUMERIC(10, 4) NOT NULL
-);
-
--- Índice para otimizar buscas por dispositivo + período
-CREATE INDEX idx_consumo_horario_disp_time 
-ON tb_consumo_horario(id_disp, timestamp_fim);

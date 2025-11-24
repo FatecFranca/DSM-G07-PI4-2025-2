@@ -10,6 +10,30 @@ export async function findById(id, userId) {
   return result.rows[0] || null;
 }
 
+
+
+export async function deleteDevice(id, userId) {
+  if (userId) {
+    const result = await pool.query('DELETE FROM tb_dispositivos WHERE id = $1 AND id_user = $2', [parseInt(id), parseInt(userId)]);
+    return result.rowCount > 0;
+  }
+  const result = await pool.query('DELETE FROM tb_dispositivos WHERE id = $1', [parseInt(id)]);
+  return result.rowCount > 0;
+}
+
+export async function findLast(userId) {
+  const result = await pool.query(
+    `SELECT codigo AS identification_code
+     FROM tb_dispositivos
+     WHERE id_user = $1
+     ORDER BY id DESC
+     LIMIT 1`,
+    [parseInt(userId)]
+  );
+
+  return result.rows[0] || null;
+}
+
 export async function create(device, userId) {
   const result = await pool.query(
     'INSERT INTO tb_dispositivos (nome_disp, codigo, endereco, id_user) VALUES ($1, $2, $3, $4) RETURNING id, nome_disp as name, codigo as identification_code, endereco as property_address',
@@ -35,6 +59,10 @@ export async function update(id, device, userId) {
     updates.push(`endereco = $${paramCount++}`);
     values.push(device.property_address);
   }
+  if (device.consumo_iot !== undefined) {
+    updates.push(`consumo_iot = $${paramCount++}`);
+    values.push(device.consumo_iot);
+  }
 
   if (updates.length === 0) return await findById(id, userId);
 
@@ -53,26 +81,4 @@ export async function update(id, device, userId) {
     );
     return result.rows[0] || null;
   }
-}
-
-export async function deleteDevice(id, userId) {
-  if (userId) {
-    const result = await pool.query('DELETE FROM tb_dispositivos WHERE id = $1 AND id_user = $2', [parseInt(id), parseInt(userId)]);
-    return result.rowCount > 0;
-  }
-  const result = await pool.query('DELETE FROM tb_dispositivos WHERE id = $1', [parseInt(id)]);
-  return result.rowCount > 0;
-}
-
-export async function findLast(userId) {
-  const result = await pool.query(
-    `SELECT codigo AS identification_code
-     FROM tb_dispositivos
-     WHERE id_user = $1
-     ORDER BY id DESC
-     LIMIT 1`,
-    [parseInt(userId)]
-  );
-
-  return result.rows[0] || null;
 }
