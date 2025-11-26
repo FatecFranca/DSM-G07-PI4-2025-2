@@ -194,3 +194,40 @@ export async function findAllForDashboard(userId) {
   const result = await pool.query(query, params);
   return result.rows.map(transform);
 }
+
+export async function updateLatestForDevice(deviceId, consumo_kwh, userId) {
+  if (!deviceId) return null;
+
+  let result;
+  if (userId) {
+    result = await pool.query(
+      `UPDATE tb_fatura f
+       SET consumo_iot = $1
+       FROM (SELECT id FROM tb_fatura WHERE id_disp = $2 AND id_user = $3 ORDER BY data DESC LIMIT 1) sub
+       WHERE f.id = sub.id
+       RETURNING f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_iot, f.valor_pago, f.preco_kwh`,
+      [String(consumo_kwh), parseInt(deviceId), parseInt(userId)]
+    );
+  } else {
+    result = await pool.query(
+      `UPDATE tb_fatura f
+       SET consumo_iot = $1
+       FROM (SELECT id FROM tb_fatura WHERE id_disp = $2 ORDER BY data DESC LIMIT 1) sub
+       WHERE f.id = sub.id
+       RETURNING f.id, f.id_disp, f.data, f.consumo_estimado, f.consumo_iot, f.valor_pago, f.preco_kwh`,
+      [String(consumo_kwh), parseInt(deviceId)]
+    );
+  }
+
+  if (!result.rows[0]) return null;
+
+  const row = result.rows[0];
+  const deviceResult = await pool.query('SELECT id, nome_disp, codigo FROM tb_dispositivos WHERE id = $1', [row.id_disp]);
+  if (deviceResult.rows[0]) {
+    row.device_id = deviceResult.rows[0].id;
+    row.device_name = deviceResult.rows[0].nome_disp;
+    row.device_code = deviceResult.rows[0].codigo;
+  }
+
+  return transform(row);
+}

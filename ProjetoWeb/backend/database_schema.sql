@@ -13,15 +13,10 @@ CREATE TABLE tb_usuarios (
 -- ============================
 CREATE TABLE tb_dispositivos (
     id SERIAL PRIMARY KEY,
-    
     id_user INT NOT NULL REFERENCES tb_usuarios(id) ON DELETE CASCADE,
-
     nome_disp VARCHAR(100) NOT NULL,
-
     codigo VARCHAR(100) NOT NULL,
-
     consumo_iot NUMERIC(10,2),
-
     endereco VARCHAR(200) NOT NULL
 );
 

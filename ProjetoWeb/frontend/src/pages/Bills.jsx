@@ -180,7 +180,7 @@ export default function Bills() {
 
     // Se faltar dados essenciais
     if (!consumoIoT || !pricePerKwh) {
-      return <Badge variant="secondary">Sem dados IoT</Badge>;
+      return <Badge variant="secondary">Ausencia de Dados</Badge>;
     }
 
     // Cálculo: Quanto deveria custar segundo o IoT?

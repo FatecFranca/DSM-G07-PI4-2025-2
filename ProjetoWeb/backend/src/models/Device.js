@@ -70,14 +70,35 @@ export async function update(id, device, userId) {
   if (userId) {
     values.push(parseInt(userId));
     const result = await pool.query(
-      `UPDATE tb_dispositivos SET ${updates.join(', ')} WHERE id = $${paramCount} AND id_user = $${paramCount+1} RETURNING id, nome_disp as name, codigo as identification_code, endereco as property_address`,
+            `UPDATE tb_dispositivos SET ${updates.join(', ')} WHERE id = $${paramCount} AND id_user = $${paramCount+1} RETURNING id, nome_disp as name, codigo as identification_code, endereco as property_address, consumo_iot`,
+
       values
+
     );
+
     return result.rows[0] || null;
+
   } else {
+
     const result = await pool.query(
-      `UPDATE tb_dispositivos SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, nome_disp as name, codigo as identification_code, endereco as property_address`,
+
+      `UPDATE tb_dispositivos SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, nome_disp as name, codigo as identification_code, endereco as property_address, consumo_iot`,
+
       values
+
+    );
+
+    return result.rows[0] || null;
+
+  }
+}
+
+
+export async function updateConsumptionById(id, id_user, consumo_kwh) {
+  if (id_user) {
+    const result = await pool.query(
+      `UPDATE tb_dispositivos SET consumo_iot = $1 WHERE id = $2 AND id_user = $3 RETURNING id, nome_disp as name, codigo as identification_code, endereco as property_address, consumo_iot`,
+      [consumo_kwh, parseInt(id), parseInt(id_user)]
     );
     return result.rows[0] || null;
   }
