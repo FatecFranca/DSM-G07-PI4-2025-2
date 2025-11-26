@@ -8,10 +8,12 @@ import pool from '../config/database.js';
 async function findDeviceIdByCode(deviceCode) {
     if (!deviceCode) return null;
     // Busca case-insensitive para aceitar códigos como 'rel001' ou 'REL001'
+    // Esta consulta é necessária para o Consumption Controller registrar dados
     const result = await pool.query(
         'SELECT id FROM tb_dispositivos WHERE LOWER(codigo) = LOWER($1)',
         [deviceCode]
     );
+    // Usamos parseInt pois o resultado do DB pode ser string
     return result.rows[0] ? parseInt(result.rows[0].id) : null;
 }
 
@@ -23,18 +25,23 @@ async function findDeviceIdByCode(deviceCode) {
  */
 export async function recordHourlyConsumption(deviceId, consumptionWh) {
     if (!deviceId || consumptionWh === undefined || consumptionWh === null) {
+        // Melhor lançar um erro mais específico em produção
         throw new Error('Device ID and consumption data are required.');
     }
 
     const consumptionNumeric = parseFloat(consumptionWh);
-    if (!isFinite(consumptionNumeric)) {
-        throw new Error('Invalid consumption value');
+    if (!isFinite(consumptionNumeric) || consumptionNumeric < 0) {
+        throw new Error('Invalid or negative consumption value.');
     }
 
+    // CORREÇÃO: Removendo 'created_at' do RETURNING.
+    // Se a sua tabela tiver uma coluna de timestamp automático (e.g., 'timestamp_registro'),
+    // ajuste o RETURNING para o nome correto da coluna. Caso contrário,
+    // apenas retornamos os valores essenciais.
     const result = await pool.query(
         `INSERT INTO tb_consumo_horario (id_disp, consumo_wh)
          VALUES ($1, $2)
-         RETURNING id, id_disp, timestamp_fim, consumo_wh`,
+         RETURNING id, id_disp, consumo_wh`,
         [deviceId, consumptionNumeric]
     );
 
