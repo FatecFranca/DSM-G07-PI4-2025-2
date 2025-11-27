@@ -170,7 +170,7 @@ export default function Dashboard() {
       const paidValue = bill.amount_paid || 0;
       if (paidValue === 0) return false;
       const diff = Math.abs(iotValue - paidValue) / paidValue;
-      return diff <= 0.05;
+      return diff <= 0.00;
     } catch (e) {
       return false;
     }
@@ -382,7 +382,7 @@ export default function Dashboard() {
         icon: <AlertTriangle className="h-6 w-6" />,
         message: "Atenção: você está pagando a mais ⚠️",
         variant: "destructive",
-        className: "bg-energy-warning text-white"
+        className: "bg-red-500 text-white "
       };
     } else {
       return {

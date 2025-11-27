@@ -11,8 +11,8 @@ npm install
 
 2. Create a `.env` file in the root directory:
 ```env
-DATABASE_URL=postgresql://postgres:jjs@1522@db.lletihfkloulzksdehro.supabase.co:5432/postgres
-JWT_SECRET=your-secret-key-change-in-production
+DATABASE_URL=postgresql:supabase.co:5432/postgres
+JWT_SECRET=
 PORT=3001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
